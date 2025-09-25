@@ -1,0 +1,16 @@
+.env
+node_modules
+.venv
+__pycache__
+.next
+dist
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.egg-info
+.coverage
+htmlcov
+.DS_Store
+Thumbs.db
+*.tsbuildinfo

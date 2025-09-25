@@ -1,0 +1,7 @@
+{
+  "name": "@store/api-client",
+  "version": "0.2.0",
+  "private": true,
+  "types": "./src/index.ts",
+  "description": "Generated TypeScript types for the Store API."
+}

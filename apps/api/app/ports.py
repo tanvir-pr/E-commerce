@@ -1,0 +1,139 @@
+"""Protocols so rules can be tested without a database."""
+
+from datetime import datetime
+from typing import Any, Protocol
+from uuid import UUID
+
+from app.records import (
+    PhoneChallengeRecord,
+    RefreshRecord,
+    ResetRecord,
+    UserRecord,
+    VerificationRecord,
+)
+
+
+class UserStore(Protocol):
+    async def get_by_email(self, email: str) -> UserRecord | None: ...
+
+    async def get_by_id(self, user_id: UUID) -> UserRecord | None: ...
+
+    async def get_by_phone(self, phone: str) -> UserRecord | None: ...
+
+    async def add(self, email: str, password_hash: str) -> UserRecord: ...
+
+    async def add_phone_user(
+        self, phone: str, password_hash: str, name: str, when: datetime
+    ) -> UserRecord: ...
+
+    async def assign_role(self, user_id: UUID, role_name: str) -> None: ...
+
+    async def list_roles(self, user_id: UUID) -> list[str]: ...
+
+    async def list_permissions(self, user_id: UUID) -> list[str]: ...
+
+    async def replace_permissions(self, user_id: UUID, permissions: list[str]) -> None: ...
+
+    async def mark_email_verified(self, user_id: UUID, when: datetime) -> None: ...
+
+    async def update_name(self, user_id: UUID, name: str, when: datetime) -> None: ...
+
+    async def set_password_hash(
+        self, user_id: UUID, password_hash: str, when: datetime
+    ) -> None: ...
+
+    async def set_totp_pending(self, user_id: UUID, ciphertext: str) -> None: ...
+
+    async def confirm_totp(self, user_id: UUID, ciphertext: str, when: datetime) -> None: ...
+
+    async def clear_totp(self, user_id: UUID) -> None: ...
+
+    async def mark_deleted(self, user_id: UUID, when: datetime) -> None: ...
+
+
+class VerificationStore(Protocol):
+    async def add(
+        self, user_id: UUID, token_hash: str, expires_at: datetime
+    ) -> VerificationRecord: ...
+
+    async def get_by_hash(self, token_hash: str) -> VerificationRecord | None: ...
+
+    async def mark_used(self, token_id: UUID, when: datetime) -> bool: ...
+
+
+class RefreshStore(Protocol):
+    async def add(self, record: RefreshRecord) -> None: ...
+
+    async def get_by_hash(self, token_hash: str) -> RefreshRecord | None: ...
+
+    async def mark_replaced(self, token_id: UUID, new_id: UUID, when: datetime) -> None: ...
+
+    async def revoke_family(self, family_id: UUID, when: datetime) -> None: ...
+
+    async def list_for_user(self, user_id: UUID) -> list[RefreshRecord]: ...
+
+    async def revoke_all_for_user(self, user_id: UUID, when: datetime) -> None: ...
+
+
+class OpaqueTokenStore(Protocol):
+    async def add(self, user_id: UUID, token_hash: str, expires_at: datetime) -> ResetRecord: ...
+
+    async def get_by_hash(self, token_hash: str) -> ResetRecord | None: ...
+
+    async def mark_used(self, token_id: UUID, when: datetime) -> bool: ...
+
+
+class RecoveryStore(Protocol):
+    async def replace(self, user_id: UUID, code_hashes: list[str], when: datetime) -> None: ...
+
+    async def use_matching(self, user_id: UUID, code_hash: str, when: datetime) -> bool: ...
+
+    async def delete_all(self, user_id: UUID) -> None: ...
+
+
+class PhoneChallengeStore(Protocol):
+    async def add(
+        self,
+        phone: str,
+        password_hash: str,
+        name: str,
+        code_hash: str,
+        expires_at: datetime,
+    ) -> PhoneChallengeRecord: ...
+
+    async def latest_open(self, phone: str, now: datetime) -> PhoneChallengeRecord | None: ...
+
+    async def increment_attempts(self, challenge_id: UUID) -> int: ...
+
+    async def mark_used(self, challenge_id: UUID, when: datetime) -> bool: ...
+
+
+class AuditWriter(Protocol):
+    async def record(
+        self,
+        *,
+        actor_id: UUID | None,
+        action: str,
+        entity_type: str,
+        entity_id: UUID | None,
+        metadata: dict[str, Any],
+        request_id: str | None,
+    ) -> None: ...
+
+
+class Mailer(Protocol):
+    async def send_verification(self, email: str, token: str) -> None: ...
+
+    async def send_password_reset(self, email: str, token: str) -> None: ...
+
+    async def send_staff_invite(self, email: str, token: str) -> None: ...
+
+
+class SmsSender(Protocol):
+    async def send_otp(self, phone: str, code: str) -> None: ...
+
+
+class RateLimiter(Protocol):
+    async def check(self, ip: str, email: str) -> None: ...
+
+    async def hit(self, scope: str, *parts: str) -> None: ...
